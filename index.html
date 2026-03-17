@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Resonance Cube</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;600&family=Space+Mono:wght@400;700&display=swap');
+
+  :root {
+    --bg: #050810;
+    --accent: #4fc3f7;
+    --dim: rgba(200, 230, 255, 0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body { width: 100%; height: 100%; overflow: hidden; touch-action: none; }
+
+  body {
+    background: var(--bg);
+    font-family: 'Space Mono', monospace;
+    color: rgba(200,230,255,0.7);
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% 50%, rgba(30,60,120,0.18) 0%, transparent 70%);
+    pointer-events: none; z-index: 0;
+  }
+
+  #topbar {
+    position: relative; z-index: 10;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px 8px;
+    flex-shrink: 0;
+    border-bottom: 1px solid rgba(120,200,255,0.07);
+  }
+
+  #topbar h1 {
+    font-family: 'Rajdhani', sans-serif; font-weight: 300;
+    font-size: 12px; letter-spacing: 0.45em; text-transform: uppercase;
+    color: var(--accent); opacity: 0.75;
+  }
+
+  #stats { font-size: 9px; letter-spacing: 0.15em; color: var(--dim); text-align: right; line-height: 1.7; }
+
+  #canvasWrap { position: relative; flex: 1; min-height: 0; z-index: 1; }
+
+  canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+  .flash { position: absolute; inset: 0; pointer-events: none; z-index: 5; opacity: 0; transition: opacity 0.06s; }
+
+  #bottombar {
+    position: relative; z-index: 10;
+    display: flex; align-items: flex-end; justify-content: space-between;
+    padding: 8px 14px max(10px, env(safe-area-inset-bottom));
+    flex-shrink: 0;
+    border-top: 1px solid rgba(120,200,255,0.07);
+    gap: 10px;
+  }
+
+  .ctrl-group { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+
+  .ctrl-group label { font-size: 8px; letter-spacing: 0.3em; color: var(--dim); }
+
+  .ctrl-group select {
+    background: rgba(10,20,40,0.85);
+    border: 1px solid rgba(120,200,255,0.18);
+    color: var(--accent);
+    font-family: 'Space Mono', monospace;
+    /* 16px minimum prevents iOS zoom on focus */
+    font-size: 16px;
+    padding: 5px 6px;
+    outline: none; cursor: pointer; border-radius: 2px; width: 100%;
+    -webkit-appearance: none; appearance: none;
+  }
+
+  /* On wider screens the 16px override looks big — scale it back */
+  @media (min-width: 480px) {
+    .ctrl-group select { font-size: 11px; }
+  }
+
+  #clearBtn {
+    background: rgba(80,100,160,0.15);
+    border: 1px solid rgba(120,200,255,0.18);
+    color: var(--dim);
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; letter-spacing: 0.2em;
+    padding: 9px 12px;
+    cursor: pointer; border-radius: 2px; text-transform: uppercase;
+    white-space: nowrap; align-self: flex-end;
+    transition: color 0.15s, border-color 0.15s;
+    -webkit-appearance: none;
+  }
+  #clearBtn:active { color: var(--accent); border-color: rgba(120,200,255,0.4); }
+
+  #hint {
+    position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+    font-size: 9px; letter-spacing: 0.2em; color: var(--dim);
+    white-space: nowrap; pointer-events: none; z-index: 10;
+    opacity: 1; transition: opacity 1s;
+  }
+  #hint.hidden { opacity: 0; }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <h1>Resonance Cube</h1>
+  <div id="stats">
+    <div>BALLS <span id="ballCount">0</span></div>
+    <div>HITS <span id="hitCount">0</span></div>
+  </div>
+</div>
+
+<div id="canvasWrap">
+  <canvas id="c"></canvas>
+  <div class="flash" id="flash"></div>
+  <div id="hint">tap the cube to add a ball</div>
+</div>
+
+<div id="bottombar">
+  <div class="ctrl-group">
+    <label>KEY</label>
+    <select id="rootSelect">
+      <option value="C">C</option><option value="C#">C#</option>
+      <option value="D">D</option><option value="Eb">Eb</option>
+      <option value="E">E</option><option value="F">F</option>
+      <option value="F#">F#</option><option value="G">G</option>
+      <option value="Ab">Ab</option><option value="A">A</option>
+      <option value="Bb">Bb</option><option value="B">B</option>
+    </select>
+  </div>
+  <div class="ctrl-group">
+    <label>MODE</label>
+    <select id="modeSelect">
+      <option value="major9">Major 9th</option>
+      <option value="minor9">Minor 9th</option>
+      <option value="dom13">Dom 13th</option>
+      <option value="maj7s11">Maj7 ♯11</option>
+      <option value="min11">Minor 11th</option>
+      <option value="dim">Diminished</option>
+    </select>
+  </div>
+  <button id="clearBtn">CLEAR</button>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const flashEl = document.getElementById('flash');
+const wrap = document.getElementById('canvasWrap');
+const hintEl = document.getElementById('hint');
+
+// ── Audio ──────────────────────────────────────────────────────────────────
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+let actx = null;
+
+function ensureAudio() {
+  if (!actx) actx = new AudioContext();
+  if (actx.state === 'suspended') actx.resume();
+}
+
+const NOTE_FREQS = {
+  'C':130.81,'C#':138.59,'D':146.83,'Eb':155.56,'E':164.81,'F':174.61,
+  'F#':185.00,'G':196.00,'Ab':207.65,'A':220.00,'Bb':233.08,'B':246.94
+};
+const CHORD_INTERVALS = {
+  major9:[0,4,7,11,14], minor9:[0,3,7,10,14], dom13:[0,4,7,10,14,21],
+  maj7s11:[0,4,7,11,14,18], min11:[0,3,7,10,14,17], dim:[0,3,6,9,12,15],
+};
+
+function getChordNotes() {
+  const root = document.getElementById('rootSelect').value;
+  const mode = document.getElementById('modeSelect').value;
+  return CHORD_INTERVALS[mode].map(i => NOTE_FREQS[root] * Math.pow(2, i/12));
+}
+
+function playBell(freq, velocity = 0.5) {
+  ensureAudio();
+  const t = actx.currentTime;
+  const partials = [
+    {ratio:1,     amp:1.0,  dec:3.2},
+    {ratio:2.756, amp:0.6,  dec:2.1},
+    {ratio:5.404, amp:0.25, dec:1.4},
+    {ratio:3.0,   amp:0.18, dec:0.9},
+    {ratio:7.08,  amp:0.10, dec:0.6},
+  ];
+  partials.forEach(p => {
+    const osc = actx.createOscillator();
+    const gain = actx.createGain();
+    const filter = actx.createBiquadFilter();
+    osc.type = 'sine'; osc.frequency.value = freq * p.ratio;
+    filter.type = 'bandpass'; filter.frequency.value = freq * p.ratio; filter.Q.value = 3;
+    gain.gain.setValueAtTime(velocity * p.amp * 0.18, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + p.dec);
+    osc.connect(filter); filter.connect(gain); gain.connect(actx.destination);
+    osc.start(t); osc.stop(t + p.dec);
+  });
+  const shimmer = actx.createOscillator();
+  const shimGain = actx.createGain();
+  shimmer.type = 'triangle'; shimmer.frequency.value = freq * 8.1;
+  shimGain.gain.setValueAtTime(velocity * 0.04, t);
+  shimGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+  shimmer.connect(shimGain); shimGain.connect(actx.destination);
+  shimmer.start(t); shimmer.stop(t + 0.4);
+}
+
+// ── Canvas sizing ──────────────────────────────────────────────────────────
+let W, H, CX, CY, cubeSize;
+const PERSP = 600;
+
+function resize() {
+  const r = wrap.getBoundingClientRect();
+  W = canvas.width  = Math.round(r.width);
+  H = canvas.height = Math.round(r.height);
+  CX = W / 2; CY = H / 2;
+  cubeSize = Math.min(W, H) * 0.42;
+}
+resize();
+new ResizeObserver(resize).observe(wrap);
+
+// ── 3D math ────────────────────────────────────────────────────────────────
+let rotX = 0.38, rotY = 0.52;
+
+function rotatePoint(x, y, z, rx, ry) {
+  let x1 = x*Math.cos(ry) + z*Math.sin(ry);
+  let z1 = -x*Math.sin(ry) + z*Math.cos(ry);
+  let y2 = y*Math.cos(rx) - z1*Math.sin(rx);
+  let z2 = y*Math.sin(rx) + z1*Math.cos(rx);
+  return [x1, y2, z2];
+}
+
+function project(x, y, z) {
+  const [rx, ry, rz] = rotatePoint(x, y, z, rotX, rotY);
+  const s = PERSP / (PERSP + rz * cubeSize * 0.5);
+  return [CX + rx*cubeSize*s, CY + ry*cubeSize*s, rz, s];
+}
+
+const CUBE_VERTS = [
+  [-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],
+  [-1,-1,1], [1,-1,1], [1,1,1], [-1,1,1]
+];
+const CUBE_EDGES = [
+  [0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]
+];
+const CUBE_FACES = [
+  {verts:[0,1,2,3]},{verts:[4,5,6,7]},{verts:[0,3,7,4]},
+  {verts:[1,2,6,5]},{verts:[3,2,6,7]},{verts:[0,1,5,4]},
+];
+const FACE_COLORS = [
+  'rgba(80,140,255,0.04)','rgba(100,200,255,0.05)','rgba(160,120,255,0.04)',
+  'rgba(80,200,200,0.04)','rgba(100,150,255,0.03)','rgba(140,100,220,0.04)',
+];
+const FACE_HIT_COLORS = ['#5b8fff','#4fc3f7','#b39ddb','#4dd0e1','#7986cb','#ce93d8'];
+
+// ── Balls ──────────────────────────────────────────────────────────────────
+let balls = [];
+let hitCount = 0;
+
+function getBallNotes(idx) {
+  const notes = getChordNotes();
+  return notes.map(f => f * Math.pow(2, Math.floor(idx/3)));
+}
+
+class Ball {
+  constructor(x, y, z, idx) {
+    this.x = x; this.y = y; this.z = z;
+    const speed = 0.004 + Math.random() * 0.005;
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(2*Math.random()-1);
+    this.vx = speed * Math.sin(phi)*Math.cos(theta);
+    this.vy = speed * Math.sin(phi)*Math.sin(theta);
+    this.vz = speed * Math.cos(phi);
+    this.idx = idx;
+    this.radius = 0.055 + Math.random()*0.03;
+    this.notes = getBallNotes(idx);
+    this.hue = [200,260,180,300,220,160,280][idx%7];
+    this.hitFlash = 0; this.hitPos = null; this.trail = [];
+  }
+
+  update() {
+    this.trail.push({x:this.x, y:this.y, z:this.z});
+    if (this.trail.length > 18) this.trail.shift();
+    this.x+=this.vx; this.y+=this.vy; this.z+=this.vz;
+    this.hitFlash *= 0.88;
+    const b = 1 - this.radius;
+    if (this.x>b)  {this.x= b; this.vx*=-1; this.onHit(3);}
+    if (this.x<-b) {this.x=-b; this.vx*=-1; this.onHit(2);}
+    if (this.y>b)  {this.y= b; this.vy*=-1; this.onHit(4);}
+    if (this.y<-b) {this.y=-b; this.vy*=-1; this.onHit(5);}
+    if (this.z>b)  {this.z= b; this.vz*=-1; this.onHit(1);}
+    if (this.z<-b) {this.z=-b; this.vz*=-1; this.onHit(0);}
+  }
+
+  onHit(fi) {
+    hitCount++;
+    document.getElementById('hitCount').textContent = hitCount;
+    playBell(this.notes[fi % this.notes.length], 0.3+Math.random()*0.5);
+    this.hitFlash = 1;
+    const [px, py] = project(this.x, this.y, this.z);
+    this.hitPos = {px, py, color:FACE_HIT_COLORS[fi], age:0};
+    flashEl.style.background = `radial-gradient(circle at ${px}px ${py}px, ${FACE_HIT_COLORS[fi]}22, transparent 40%)`;
+    flashEl.style.opacity = '1';
+    setTimeout(()=>flashEl.style.opacity='0', 60);
+  }
+
+  draw() {
+    for (let i=0; i<this.trail.length; i++) {
+      const t=this.trail[i];
+      const [px,py,,sc]=project(t.x,t.y,t.z);
+      const r=Math.max(1.5,this.radius*cubeSize*sc*0.6)*(i/this.trail.length);
+      ctx.beginPath(); ctx.arc(px,py,r,0,Math.PI*2);
+      ctx.fillStyle=`hsla(${this.hue},80%,70%,${(i/this.trail.length)*0.35})`; ctx.fill();
+    }
+    const [px,py,,sc]=project(this.x,this.y,this.z);
+    const r=Math.max(3,this.radius*cubeSize*sc);
+    const grd=ctx.createRadialGradient(px,py,0,px,py,r*3.5);
+    grd.addColorStop(0,`hsla(${this.hue},100%,80%,${0.15+this.hitFlash*0.35})`);
+    grd.addColorStop(1,'transparent');
+    ctx.beginPath(); ctx.arc(px,py,r*3.5,0,Math.PI*2); ctx.fillStyle=grd; ctx.fill();
+    const cg=ctx.createRadialGradient(px-r*0.3,py-r*0.3,0,px,py,r);
+    cg.addColorStop(0,`hsla(${this.hue},60%,95%,1)`);
+    cg.addColorStop(0.5,`hsla(${this.hue},80%,70%,1)`);
+    cg.addColorStop(1,`hsla(${this.hue},100%,45%,1)`);
+    ctx.beginPath(); ctx.arc(px,py,r,0,Math.PI*2); ctx.fillStyle=cg; ctx.fill();
+    if (this.hitPos && this.hitPos.age<30) {
+      this.hitPos.age++;
+      const rr=r+this.hitPos.age*2, a=Math.max(0,1-this.hitPos.age/30);
+      ctx.beginPath(); ctx.arc(px,py,rr,0,Math.PI*2);
+      ctx.strokeStyle=`${this.hitPos.color}${Math.floor(a*255).toString(16).padStart(2,'0')}`;
+      ctx.lineWidth=1.5; ctx.stroke();
+    }
+  }
+}
+
+// ── Draw cube ──────────────────────────────────────────────────────────────
+function drawCube() {
+  const proj = CUBE_VERTS.map(v=>project(...v));
+  const fd = CUBE_FACES.map((f,i)=>({
+    face:f, idx:i, avgZ:f.verts.reduce((s,v)=>s+proj[v][2],0)/f.verts.length
+  }));
+  fd.sort((a,b)=>a.avgZ-b.avgZ);
+  for (const {face,idx} of fd) {
+    const pts=face.verts.map(v=>proj[v]);
+    ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
+    for (let i=1;i<pts.length;i++) ctx.lineTo(pts[i][0],pts[i][1]);
+    ctx.closePath(); ctx.fillStyle=FACE_COLORS[idx]; ctx.fill();
+  }
+  ctx.lineWidth=0.8;
+  for (const [a,b] of CUBE_EDGES) {
+    const [ax,ay,az]=proj[a],[bx,by,bz]=proj[b];
+    const alpha=0.15+0.25*(1-Math.min(1,(az+bz)/2+0.5));
+    ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by);
+    ctx.strokeStyle=`rgba(120,200,255,${alpha})`; ctx.stroke();
+  }
+  for (const [px,py] of proj) {
+    ctx.beginPath(); ctx.arc(px,py,2,0,Math.PI*2);
+    ctx.fillStyle='rgba(120,200,255,0.35)'; ctx.fill();
+  }
+}
+
+// ── Spawn ──────────────────────────────────────────────────────────────────
+function spawnBall(mx, my) {
+  ensureAudio();
+  if (balls.length >= 16) return;
+  hintEl.classList.add('hidden');
+  const z3d=(Math.random()-0.5)*1.4;
+  const dx=(mx-CX)/cubeSize, dy=(my-CY)/cubeSize;
+  const cosRY=Math.cos(-rotY), sinRY=Math.sin(-rotY);
+  const sinRX=Math.sin(-rotX), cosRX=Math.cos(-rotX);
+  let x3d=dx*cosRY+z3d*sinRY;
+  let z3d2=-dx*sinRY+z3d*cosRY;
+  let y3d=dy*cosRX-z3d2*sinRX;
+  x3d=Math.max(-0.8,Math.min(0.8,x3d));
+  y3d=Math.max(-0.8,Math.min(0.8,y3d));
+  balls.push(new Ball(x3d, y3d, z3d2*0.5, balls.length));
+  document.getElementById('ballCount').textContent = balls.length;
+  const notes=getChordNotes();
+  playBell(notes[balls.length%notes.length]*2, 0.6);
+}
+
+function clearBalls() {
+  balls=[]; hitCount=0;
+  document.getElementById('ballCount').textContent=0;
+  document.getElementById('hitCount').textContent=0;
+}
+
+// ── Events ────────────────────────────────────────────────────────────────
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const rect=canvas.getBoundingClientRect();
+  const sx=W/rect.width, sy=H/rect.height;
+  for (const touch of e.changedTouches) {
+    spawnBall((touch.clientX-rect.left)*sx, (touch.clientY-rect.top)*sy);
+  }
+}, {passive:false});
+
+canvas.addEventListener('click', e => {
+  const rect=canvas.getBoundingClientRect();
+  spawnBall((e.clientX-rect.left)*(W/rect.width), (e.clientY-rect.top)*(H/rect.height));
+});
+
+document.getElementById('rootSelect').addEventListener('change', ()=>balls.forEach((b,i)=>b.notes=getBallNotes(i)));
+document.getElementById('modeSelect').addEventListener('change', ()=>balls.forEach((b,i)=>b.notes=getBallNotes(i)));
+document.getElementById('clearBtn').addEventListener('click', clearBalls);
+window.addEventListener('keydown', e=>{ if(e.code==='Space') clearBalls(); });
+
+// ── Loop ──────────────────────────────────────────────────────────────────
+function loop() {
+  requestAnimationFrame(loop);
+  rotY+=0.0008; rotX+=0.0002;
+  ctx.clearRect(0,0,W,H);
+  drawCube();
+  const sorted=[...balls].sort((a,b)=>{
+    const [,,az]=rotatePoint(a.x,a.y,a.z,rotX,rotY);
+    const [,,bz]=rotatePoint(b.x,b.y,b.z,rotX,rotY);
+    return az-bz;
+  });
+  for (const ball of sorted) { ball.update(); ball.draw(); }
+}
+loop();
+</script>
+</body>
+</html>
