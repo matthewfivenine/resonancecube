@@ -179,6 +179,76 @@
     transition: opacity 0.5s;
   }
 
+  /* ── Sequence picker ── */
+  #seqPicker {
+    position: fixed; inset: 0; z-index: 90;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: #050810;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.35s;
+  }
+  #seqPicker.visible { opacity: 1; pointer-events: all; }
+
+  #seqPicker::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 70% 50% at 50% 50%, rgba(30,60,120,0.25) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .seq-picker-title {
+    font-family: 'Rajdhani', sans-serif; font-weight: 300;
+    font-size: 10px; letter-spacing: 0.5em; text-transform: uppercase;
+    color: var(--accent); opacity: 0.6; margin-bottom: 22px;
+    position: relative;
+  }
+
+  .seq-list {
+    position: relative;
+    display: flex; flex-direction: column; gap: 6px;
+    width: min(320px, 88vw);
+    max-height: 72vh; overflow-y: auto;
+  }
+
+  .seq-list::-webkit-scrollbar { width: 2px; }
+  .seq-list::-webkit-scrollbar-thumb { background: rgba(120,200,255,0.2); border-radius: 2px; }
+
+  .seq-item {
+    background: transparent;
+    border: 1px solid rgba(120,200,255,0.15);
+    color: rgba(200,230,255,0.7);
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; letter-spacing: 0.25em;
+    padding: 13px 16px;
+    cursor: pointer; text-transform: uppercase;
+    transition: border-color 0.18s, color 0.18s, background 0.18s;
+    text-align: left; position: relative;
+    display: flex; align-items: center; justify-content: space-between;
+    -webkit-appearance: none;
+  }
+  .seq-item:hover, .seq-item:active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(79,195,247,0.04);
+  }
+  .seq-item .seq-tag {
+    font-size: 8px; letter-spacing: 0.15em;
+    color: rgba(79,195,247,0.4);
+    font-family: 'Rajdhani', sans-serif; font-weight: 400;
+    text-transform: none; white-space: nowrap; margin-left: 10px;
+  }
+
+  .seq-back {
+    margin-top: 18px; position: relative;
+    background: transparent; border: none;
+    color: var(--dim); font-family: 'Space Mono', monospace;
+    font-size: 8px; letter-spacing: 0.3em; text-transform: uppercase;
+    cursor: pointer; padding: 6px 0;
+    transition: color 0.15s;
+  }
+  .seq-back:hover { color: var(--accent); }
+
   /* ── Sequence badge ── */
   #seqBadge {
     position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
@@ -190,6 +260,12 @@
 </style>
 </head>
 <body>
+
+<div id="seqPicker">
+  <div class="seq-picker-title">Choose a Sequence</div>
+  <div class="seq-list" id="seqList"></div>
+  <button class="seq-back" id="seqBack">← back</button>
+</div>
 
 <div id="splash">
   <div class="splash-title">Resonance Cube</div>
@@ -224,6 +300,17 @@
 </div>
 
 <div id="bottombar">
+  <div class="ctrl-group">
+    <label>SOUND</label>
+    <select id="soundSelect">
+      <option value="chime" selected>Chime</option>
+      <option value="marimba">Marimba</option>
+      <option value="vibraphone">Vibraphone</option>
+      <option value="gamelan">Gamelan</option>
+      <option value="tubular">Tubular Bell</option>
+      <option value="crystal">Crystal Bowl</option>
+    </select>
+  </div>
   <div class="ctrl-group">
     <label>KEY</label>
     <select id="rootSelect">
@@ -302,6 +389,40 @@ const CHORD_INTERVALS = {
 // 10 impressionistic/modern chord progressions
 // Each step: [root, mode, durationSeconds, label]
 const SEQUENCES = [
+  // ── Elijah Fox-inspired: modern impressionistic piano ─────────────────────
+  {
+    name: "Golden Hour",
+    steps: [
+      ['D','maj7s11',16,'D Maj7♯11'],['A','sus2',14,'A Sus 2'],
+      ['E','major9',16,'E Major 9'], ['B','maj7s11',14,'B Maj7♯11'],
+      ['G','major9',16,'G Major 9'], ['D','sus4',14,'D Sus 4'],
+    ]
+  },
+  {
+    name: "Tender Drift",
+    steps: [
+      ['Db','major9',18,'D♭ Major 9'],['Ab','maj7s11',16,'A♭ Maj7♯11'],
+      ['Eb','major9',18,'E♭ Major 9'],['Bb','maj13',16,'B♭ Major 13'],
+      ['F', 'major9',18,'F Major 9'],
+    ]
+  },
+  {
+    name: "Blue Reverie",
+    steps: [
+      ['A','minor9', 16,'A Minor 9'],['C','major9', 16,'C Major 9'],
+      ['F','maj7s11',16,'F Maj7♯11'],['D','minor9', 16,'D Minor 9'],
+      ['G','sus2',   14,'G Sus 2'],  ['Bb','major9',16,'B♭ Major 9'],
+    ]
+  },
+  {
+    name: "Still Water",
+    steps: [
+      ['E','sus2',   20,'E Sus 2'],  ['B','major9',  18,'B Major 9'],
+      ['F#','maj7s11',20,'F♯ Maj7♯11'],['C#','minor9',18,'C♯ Minor 9'],
+      ['A','sus4',   20,'A Sus 4'],  ['E','major9',  18,'E Major 9'],
+    ]
+  },
+  // ── Classic impressionistic ───────────────────────────────────────────────
   {
     name: "Satie Morning",
     steps: [
@@ -310,64 +431,41 @@ const SEQUENCES = [
     ]
   },
   {
-    name: "Debussy Afternoon",
-    steps: [
-      ['F','wholetone',12,'F Whole Tone'],['Eb','maj7s11',12,'Eb Maj7♯11'],
-      ['Ab','major9',12,'Ab Major 9'],['Bb','maj7s11',12,'Bb Maj7♯11'],
-      ['G','wholetone',12,'G Whole Tone'],
-    ]
-  },
-  {
-    name: "Ravel Dusk",
-    steps: [
-      ['C','maj13',14,'C Major 13'],['A','min11',14,'A Minor 11'],
-      ['F','maj7s11',14,'F Maj7♯11'],['G','dom13',14,'G Dom 13'],
-    ]
-  },
-  {
     name: "Feldman Still",
     steps: [
       ['Eb','major9',20,'Eb Major 9'],['B','maj7s11',20,'B Maj7♯11'],
-      ['Ab','min11',20,'Ab Minor 11'],['E','major9',20,'E Major 9'],
-    ]
-  },
-  {
-    name: "Arvo Pärt Shimmer",
-    steps: [
-      ['A','minor9',16,'A Minor 9'],['C','major9',16,'C Major 9'],
-      ['E','sus2',16,'E Sus 2'],['G','major9',16,'G Major 9'],
-      ['D','sus4',16,'D Sus 4'],
+      ['Ab','min11', 20,'Ab Minor 11'],['E','major9', 20,'E Major 9'],
     ]
   },
   {
     name: "Takemitsu Rain",
     steps: [
-      ['F#','min13',14,'F♯ Minor 13'],['D','maj7s11',14,'D Maj7♯11'],
-      ['B','halfdim',14,'B Half Dim'],['G','maj13',14,'G Major 13'],
-      ['Eb','min11',14,'Eb Minor 11'],
+      ['F#','min13', 14,'F♯ Minor 13'],['D','maj7s11',14,'D Maj7♯11'],
+      ['B','halfdim',14,'B Half Dim'], ['G','maj13',  14,'G Major 13'],
+      ['Eb','min11', 14,'Eb Minor 11'],
     ]
   },
   {
     name: "ECM Night",
     steps: [
-      ['G','minor9',16,'G Minor 9'],['Bb','maj7s11',16,'Bb Maj7♯11'],
-      ['F','min11',16,'F Minor 11'],['Ab','major9',16,'Ab Major 9'],
+      ['G','minor9', 16,'G Minor 9'],['Bb','maj7s11',16,'Bb Maj7♯11'],
+      ['F','min11',  16,'F Minor 11'],['Ab','major9', 16,'Ab Major 9'],
     ]
   },
   {
     name: "Messiaen Light",
     steps: [
       ['C','wholetone',12,'C Whole Tone'],['F#','wholetone',12,'F♯ Whole Tone'],
-      ['D','maj7s11',14,'D Maj7♯11'],['Ab','maj13',14,'Ab Major 13'],
+      ['D','maj7s11',  14,'D Maj7♯11'],  ['Ab','maj13',    14,'Ab Major 13'],
       ['E','wholetone',12,'E Whole Tone'],
     ]
   },
   {
     name: "Glass Pulse",
     steps: [
-      ['D','minor9',10,'D Minor 9'],['F','major9',10,'F Major 9'],
+      ['D','minor9',10,'D Minor 9'],['F','major9', 10,'F Major 9'],
       ['C','maj7s11',10,'C Maj7♯11'],['Bb','minor9',10,'Bb Minor 9'],
-      ['G','sus2',10,'G Sus 2'],['A','minor9',10,'A Minor 9'],
+      ['G','sus2',  10,'G Sus 2'],  ['A','minor9', 10,'A Minor 9'],
     ]
   },
   {
@@ -405,8 +503,13 @@ function getChordNotes() {
   return CHORD_INTERVALS[mode].map(i => NOTE_FREQS[root] * Math.pow(2, i/12));
 }
 
-function playBell(freq, velocity = 0.5) {
-  ensureAudio();
+function getSoundType() {
+  const el = document.getElementById('soundSelect');
+  return el ? el.value : 'chime';
+}
+
+// ── Chime (original) ──────────────────────────────────────────────────────
+function playChime(freq, velocity) {
   const t = actx.currentTime;
   const partials = [
     {ratio:1,     amp:1.0,  dec:3.2},
@@ -433,6 +536,164 @@ function playBell(freq, velocity = 0.5) {
   shimGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
   shimmer.connect(shimGain); shimGain.connect(actx.destination);
   shimmer.start(t); shimmer.stop(t + 0.4);
+}
+
+// ── Marimba — woody, resonant, fast attack, medium decay ─────────────────
+function playMarimba(freq, velocity) {
+  const t = actx.currentTime;
+  // Marimba partials: strong fundamental, lower inharmonics, fast decay
+  const partials = [
+    {ratio:1,    amp:1.0,  dec:0.9,  type:'sine'},
+    {ratio:3.93, amp:0.35, dec:0.45, type:'sine'},
+    {ratio:9.87, amp:0.12, dec:0.20, type:'sine'},
+  ];
+  partials.forEach(p => {
+    const osc = actx.createOscillator();
+    const gain = actx.createGain();
+    osc.type = p.type; osc.frequency.value = freq * p.ratio;
+    gain.gain.setValueAtTime(velocity * p.amp * 0.22, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + p.dec);
+    osc.connect(gain); gain.connect(actx.destination);
+    osc.start(t); osc.stop(t + p.dec);
+  });
+  // Body thump noise burst
+  const buf = actx.createBuffer(1, actx.sampleRate * 0.025, actx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2-1);
+  const src = actx.createBufferSource();
+  const nfilt = actx.createBiquadFilter();
+  const nGain = actx.createGain();
+  src.buffer = buf;
+  nfilt.type = 'bandpass'; nfilt.frequency.value = freq * 1.2; nfilt.Q.value = 8;
+  nGain.gain.setValueAtTime(velocity * 0.15, t);
+  nGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.025);
+  src.connect(nfilt); nfilt.connect(nGain); nGain.connect(actx.destination);
+  src.start(t);
+}
+
+// ── Vibraphone — metallic, tremolo shimmer, long sustain ─────────────────
+function playVibraphone(freq, velocity) {
+  const t = actx.currentTime;
+  const dec = 4.5;
+  const partials = [
+    {ratio:1,    amp:1.0,  type:'sine'},
+    {ratio:2.0,  amp:0.28, type:'sine'},
+    {ratio:5.6,  amp:0.14, type:'sine'},
+    {ratio:9.1,  amp:0.07, type:'sine'},
+  ];
+  // LFO for tremolo (motor-driven vibrato effect)
+  const lfo = actx.createOscillator();
+  const lfoGain = actx.createGain();
+  lfo.frequency.value = 5.8;
+  lfoGain.gain.value = freq * 0.003;
+  lfo.connect(lfoGain);
+  lfo.start(t); lfo.stop(t + dec);
+
+  partials.forEach(p => {
+    const osc = actx.createOscillator();
+    const gain = actx.createGain();
+    osc.type = p.type; osc.frequency.value = freq * p.ratio;
+    lfoGain.connect(osc.frequency);
+    gain.gain.setValueAtTime(velocity * p.amp * 0.17, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dec);
+    osc.connect(gain); gain.connect(actx.destination);
+    osc.start(t); osc.stop(t + dec);
+  });
+}
+
+// ── Gamelan — inharmonic shimmer, Javanese-inspired, Reich-adjacent ───────
+function playGamelan(freq, velocity) {
+  const t = actx.currentTime;
+  // Gamelan gong-ish: stretched, clustered inharmonics — two detuned copies
+  const voices = [
+    {ratio:1,     detune:0,   amp:1.0,  dec:5.0},
+    {ratio:1,     detune:14,  amp:0.75, dec:4.5},
+    {ratio:2.97,  detune:0,   amp:0.40, dec:2.8},
+    {ratio:5.21,  detune:-8,  amp:0.20, dec:1.8},
+    {ratio:7.42,  detune:6,   amp:0.10, dec:1.0},
+    {ratio:0.501, detune:0,   amp:0.30, dec:4.0},
+  ];
+  voices.forEach(v => {
+    const osc = actx.createOscillator();
+    const gain = actx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq * v.ratio;
+    osc.detune.value = v.detune;
+    gain.gain.setValueAtTime(velocity * v.amp * 0.14, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + v.dec);
+    osc.connect(gain); gain.connect(actx.destination);
+    osc.start(t); osc.stop(t + v.dec);
+  });
+}
+
+// ── Tubular Bell — church-bell character, inharmonic, very long ───────────
+function playTubular(freq, velocity) {
+  const t = actx.currentTime;
+  // Tubular bell partials from analysis of real bell spectra
+  const partials = [
+    {ratio:1,     amp:1.0,  dec:6.0},
+    {ratio:2.756, amp:0.55, dec:5.0},
+    {ratio:5.404, amp:0.30, dec:3.5},
+    {ratio:3.0,   amp:0.25, dec:2.8},
+    {ratio:4.0,   amp:0.18, dec:2.2},
+    {ratio:7.08,  amp:0.12, dec:1.5},
+    {ratio:8.9,   amp:0.07, dec:0.8},
+  ];
+  partials.forEach(p => {
+    const osc = actx.createOscillator();
+    const gain = actx.createGain();
+    osc.type = 'sine'; osc.frequency.value = freq * p.ratio;
+    // Short attack, long exponential tail
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.linearRampToValueAtTime(velocity * p.amp * 0.15, t + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + p.dec);
+    osc.connect(gain); gain.connect(actx.destination);
+    osc.start(t); osc.stop(t + p.dec);
+  });
+  // Strike click
+  const click = actx.createOscillator();
+  const clickGain = actx.createGain();
+  click.type = 'sine'; click.frequency.value = freq * 12;
+  clickGain.gain.setValueAtTime(velocity * 0.12, t);
+  clickGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.015);
+  click.connect(clickGain); clickGain.connect(actx.destination);
+  click.start(t); click.stop(t + 0.015);
+}
+
+// ── Crystal Bowl — singing bowl, slow bloom, very pure ────────────────────
+function playCrystal(freq, velocity) {
+  const t = actx.currentTime;
+  const dec = 7.0;
+  // Near-harmonic pure tones, very slow attack like rubbing the rim
+  const partials = [
+    {ratio:1,   amp:1.0,  att:0.08},
+    {ratio:2.0, amp:0.50, att:0.14},
+    {ratio:3.0, amp:0.22, att:0.22},
+    {ratio:4.0, amp:0.10, att:0.30},
+  ];
+  partials.forEach(p => {
+    const osc = actx.createOscillator();
+    const gain = actx.createGain();
+    osc.type = 'sine'; osc.frequency.value = freq * p.ratio;
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.linearRampToValueAtTime(velocity * p.amp * 0.13, t + p.att);
+    gain.gain.setValueAtTime(velocity * p.amp * 0.13, t + p.att);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dec);
+    osc.connect(gain); gain.connect(actx.destination);
+    osc.start(t); osc.stop(t + dec);
+  });
+}
+
+function playBell(freq, velocity = 0.5) {
+  ensureAudio();
+  const sound = getSoundType();
+  if      (sound === 'chime')     playChime(freq, velocity);
+  else if (sound === 'marimba')   playMarimba(freq, velocity);
+  else if (sound === 'vibraphone')playVibraphone(freq, velocity);
+  else if (sound === 'gamelan')   playGamelan(freq, velocity);
+  else if (sound === 'tubular')   playTubular(freq, velocity);
+  else if (sound === 'crystal')   playCrystal(freq, velocity);
+  else                            playChime(freq, velocity);
 }
 
 function playPad(freq, velocity = 0.4) {
@@ -823,6 +1084,42 @@ function stopSequence() {
   seqBadgeEl.classList.remove('visible');
 }
 
+// ── Sequence picker ───────────────────────────────────────────────────────
+const seqPickerEl = document.getElementById('seqPicker');
+const seqListEl   = document.getElementById('seqList');
+
+// Subtitle tags for each sequence
+const SEQ_TAGS = [
+  'modern impressionistic', 'modern impressionistic',
+  'modern impressionistic', 'modern impressionistic',
+  'satie / gymnopedie', 'feldman / still',
+  'takemitsu / rain', 'ecm / scandinavian',
+  'messiaen / spectral', 'glass / minimalist',
+];
+
+function buildSeqList() {
+  seqListEl.innerHTML = '';
+  SEQUENCES.forEach((seq, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'seq-item';
+    btn.innerHTML = `<span>${seq.name}</span><span class="seq-tag">${SEQ_TAGS[i] || ''}</span>`;
+    btn.addEventListener('click', () => {
+      ensureAudio();
+      appMode = 'sequence';
+      seqPickerEl.classList.remove('visible');
+      seqIndex = i;
+      seqStep = 0;
+      applySeqStep();
+    });
+    seqListEl.appendChild(btn);
+  });
+}
+
+document.getElementById('seqBack').addEventListener('click', () => {
+  seqPickerEl.classList.remove('visible');
+  splashEl.classList.remove('hidden');
+});
+
 // ── Splash buttons ────────────────────────────────────────────────────────
 document.getElementById('btnFreePlay').addEventListener('click', () => {
   ensureAudio();
@@ -832,10 +1129,9 @@ document.getElementById('btnFreePlay').addEventListener('click', () => {
 });
 
 document.getElementById('btnSequence').addEventListener('click', () => {
-  ensureAudio();
-  appMode = 'sequence';
+  buildSeqList();
   splashEl.classList.add('hidden');
-  startSequence();
+  seqPickerEl.classList.add('visible');
 });
 
 // ── Loop ──────────────────────────────────────────────────────────────────
