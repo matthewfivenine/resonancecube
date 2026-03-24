@@ -108,9 +108,105 @@
     opacity: 1; transition: opacity 1s;
   }
   #hint.hidden { opacity: 0; }
+
+  /* ── Splash screen ── */
+  #splash {
+    position: fixed; inset: 0; z-index: 100;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: #050810;
+    gap: 0;
+  }
+
+  #splash::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 70% 50% at 50% 50%, rgba(30,60,120,0.25) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .splash-title {
+    font-family: 'Rajdhani', sans-serif; font-weight: 300;
+    font-size: clamp(28px, 8vw, 52px);
+    letter-spacing: 0.5em; text-transform: uppercase;
+    color: var(--accent); opacity: 0.9;
+    margin-bottom: 6px;
+  }
+
+  .splash-sub {
+    font-size: 9px; letter-spacing: 0.35em;
+    color: var(--dim); margin-bottom: 52px;
+    text-transform: uppercase;
+  }
+
+  .splash-btns {
+    display: flex; flex-direction: column; gap: 14px;
+    width: min(280px, 80vw);
+  }
+
+  .splash-btn {
+    background: transparent;
+    border: 1px solid rgba(120,200,255,0.25);
+    color: rgba(200,230,255,0.75);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px; letter-spacing: 0.3em;
+    padding: 16px 20px;
+    cursor: pointer; text-transform: uppercase;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+    text-align: left; position: relative;
+  }
+
+  .splash-btn:hover, .splash-btn:active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(79,195,247,0.05);
+  }
+
+  .splash-btn .btn-label { display: block; margin-bottom: 4px; }
+  .splash-btn .btn-desc {
+    display: block; font-size: 8px; letter-spacing: 0.15em;
+    color: var(--dim); font-family: 'Rajdhani', sans-serif;
+    font-weight: 400; text-transform: none;
+  }
+
+  .splash-btn .btn-arrow {
+    position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+    font-size: 14px; color: rgba(120,200,255,0.4);
+  }
+
+  #splash.hidden {
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.5s;
+  }
+
+  /* ── Sequence badge ── */
+  #seqBadge {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    font-size: 8px; letter-spacing: 0.2em; color: var(--dim);
+    pointer-events: none; z-index: 10; white-space: nowrap;
+    opacity: 0; transition: opacity 0.4s;
+  }
+  #seqBadge.visible { opacity: 1; }
 </style>
 </head>
 <body>
+
+<div id="splash">
+  <div class="splash-title">Resonance Cube</div>
+  <div class="splash-sub">an ambient music machine</div>
+  <div class="splash-btns">
+    <button class="splash-btn" id="btnFreePlay">
+      <span class="btn-label">Free Play</span>
+      <span class="btn-desc">Choose your own key &amp; chord — tap to add balls</span>
+      <span class="btn-arrow">→</span>
+    </button>
+    <button class="splash-btn" id="btnSequence">
+      <span class="btn-label">Sequence</span>
+      <span class="btn-desc">Drift through 10 impressionistic chord progressions</span>
+      <span class="btn-arrow">→</span>
+    </button>
+  </div>
+</div>
 
 <div id="topbar">
   <h1>Resonance Cube</h1>
@@ -124,6 +220,7 @@
   <canvas id="c"></canvas>
   <div class="flash" id="flash"></div>
   <div id="hint">tap the cube to add a ball</div>
+  <div id="seqBadge"></div>
 </div>
 
 <div id="bottombar">
@@ -201,7 +298,108 @@ const CHORD_INTERVALS = {
   chromatic:[0,1,2,3,4,5],
 };
 
+// ── Sequences ──────────────────────────────────────────────────────────────
+// 10 impressionistic/modern chord progressions
+// Each step: [root, mode, durationSeconds, label]
+const SEQUENCES = [
+  {
+    name: "Satie Morning",
+    steps: [
+      ['D','maj7s11',14,'D Maj7♯11'],['A','major9',14,'A Major 9'],
+      ['G','maj7s11',14,'G Maj7♯11'],['E','minor9',14,'E Minor 9'],
+    ]
+  },
+  {
+    name: "Debussy Afternoon",
+    steps: [
+      ['F','wholetone',12,'F Whole Tone'],['Eb','maj7s11',12,'Eb Maj7♯11'],
+      ['Ab','major9',12,'Ab Major 9'],['Bb','maj7s11',12,'Bb Maj7♯11'],
+      ['G','wholetone',12,'G Whole Tone'],
+    ]
+  },
+  {
+    name: "Ravel Dusk",
+    steps: [
+      ['C','maj13',14,'C Major 13'],['A','min11',14,'A Minor 11'],
+      ['F','maj7s11',14,'F Maj7♯11'],['G','dom13',14,'G Dom 13'],
+    ]
+  },
+  {
+    name: "Feldman Still",
+    steps: [
+      ['Eb','major9',20,'Eb Major 9'],['B','maj7s11',20,'B Maj7♯11'],
+      ['Ab','min11',20,'Ab Minor 11'],['E','major9',20,'E Major 9'],
+    ]
+  },
+  {
+    name: "Arvo Pärt Shimmer",
+    steps: [
+      ['A','minor9',16,'A Minor 9'],['C','major9',16,'C Major 9'],
+      ['E','sus2',16,'E Sus 2'],['G','major9',16,'G Major 9'],
+      ['D','sus4',16,'D Sus 4'],
+    ]
+  },
+  {
+    name: "Takemitsu Rain",
+    steps: [
+      ['F#','min13',14,'F♯ Minor 13'],['D','maj7s11',14,'D Maj7♯11'],
+      ['B','halfdim',14,'B Half Dim'],['G','maj13',14,'G Major 13'],
+      ['Eb','min11',14,'Eb Minor 11'],
+    ]
+  },
+  {
+    name: "ECM Night",
+    steps: [
+      ['G','minor9',16,'G Minor 9'],['Bb','maj7s11',16,'Bb Maj7♯11'],
+      ['F','min11',16,'F Minor 11'],['Ab','major9',16,'Ab Major 9'],
+    ]
+  },
+  {
+    name: "Messiaen Light",
+    steps: [
+      ['C','wholetone',12,'C Whole Tone'],['F#','wholetone',12,'F♯ Whole Tone'],
+      ['D','maj7s11',14,'D Maj7♯11'],['Ab','maj13',14,'Ab Major 13'],
+      ['E','wholetone',12,'E Whole Tone'],
+    ]
+  },
+  {
+    name: "Glass Pulse",
+    steps: [
+      ['D','minor9',10,'D Minor 9'],['F','major9',10,'F Major 9'],
+      ['C','maj7s11',10,'C Maj7♯11'],['Bb','minor9',10,'Bb Minor 9'],
+      ['G','sus2',10,'G Sus 2'],['A','minor9',10,'A Minor 9'],
+    ]
+  },
+  {
+    name: "Ligeti Mist",
+    steps: [
+      ['C#','chromatic',14,'C♯ Chromatic'],['F','maj7s11',14,'F Maj7♯11'],
+      ['Bb','min13',14,'Bb Minor 13'],['E','wholetone',14,'E Whole Tone'],
+      ['Ab','chromatic',14,'Ab Chromatic'],
+    ]
+  },
+];
+
+// ── App state ──────────────────────────────────────────────────────────────
+let appMode = 'splash'; // 'splash' | 'freeplay' | 'sequence'
+let seqIndex = 0;        // which sequence (0–9)
+let seqStep = 0;         // current step within sequence
+let seqTimer = null;
+const seqBadgeEl = document.getElementById('seqBadge');
+const splashEl = document.getElementById('splash');
+
+function getChordNotesFromStep(root, mode) {
+  return CHORD_INTERVALS[mode].map(i => NOTE_FREQS[root] * Math.pow(2, i/12));
+}
+
+
+
 function getChordNotes() {
+  if (appMode === 'sequence') {
+    const seq = SEQUENCES[seqIndex];
+    const [root, mode] = seq.steps[seqStep];
+    return getChordNotesFromStep(root, mode);
+  }
   const root = document.getElementById('rootSelect').value;
   const mode = document.getElementById('modeSelect').value;
   return CHORD_INTERVALS[mode].map(i => NOTE_FREQS[root] * Math.pow(2, i/12));
@@ -596,6 +794,50 @@ document.getElementById('modeSelect').addEventListener('change', () => {
 document.getElementById('clearBtn').addEventListener('click', clearBalls);
 window.addEventListener('keydown', e=>{ if(e.code==='Space') clearBalls(); });
 
+// ── Sequence stepper ──────────────────────────────────────────────────────
+function applySeqStep() {
+  const seq = SEQUENCES[seqIndex];
+  const [root, mode, dur, label] = seq.steps[seqStep];
+  document.getElementById('rootSelect').value = root;
+  document.getElementById('modeSelect').value = mode;
+  balls.forEach((b,i)=>b.notes=getBallNotes(i));
+  padBalls.forEach((b,i)=>{ b.note=getPadNote(i); });
+  const totalSteps = seq.steps.length;
+  seqBadgeEl.textContent = `${seq.name}  ·  ${label}  ·  ${seqStep+1}/${totalSteps}`;
+  seqBadgeEl.classList.add('visible');
+  clearTimeout(seqTimer);
+  seqTimer = setTimeout(() => {
+    seqStep = (seqStep + 1) % seq.steps.length;
+    applySeqStep();
+  }, dur * 1000);
+}
+
+function startSequence() {
+  seqIndex = Math.floor(Math.random() * SEQUENCES.length);
+  seqStep = 0;
+  applySeqStep();
+}
+
+function stopSequence() {
+  clearTimeout(seqTimer);
+  seqBadgeEl.classList.remove('visible');
+}
+
+// ── Splash buttons ────────────────────────────────────────────────────────
+document.getElementById('btnFreePlay').addEventListener('click', () => {
+  ensureAudio();
+  appMode = 'freeplay';
+  stopSequence();
+  splashEl.classList.add('hidden');
+});
+
+document.getElementById('btnSequence').addEventListener('click', () => {
+  ensureAudio();
+  appMode = 'sequence';
+  splashEl.classList.add('hidden');
+  startSequence();
+});
+
 // ── Loop ──────────────────────────────────────────────────────────────────
 function loop() {
   requestAnimationFrame(loop);
@@ -603,10 +845,9 @@ function loop() {
   ctx.clearRect(0,0,W,H);
   drawCube();
 
-  // Sort all entities by depth together
   const allEntities = [
-    ...balls.map(b=>({entity:b, type:'ball'})),
-    ...padBalls.map(b=>({entity:b, type:'pad'}))
+    ...balls.map(b=>({entity:b})),
+    ...padBalls.map(b=>({entity:b}))
   ].sort((a,b)=>{
     const [,,az]=rotatePoint(a.entity.x,a.entity.y,a.entity.z,rotX,rotY);
     const [,,bz]=rotatePoint(b.entity.x,b.entity.y,b.entity.z,rotX,rotY);
