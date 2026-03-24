@@ -303,9 +303,9 @@
   <div class="ctrl-group">
     <label>SOUND</label>
     <select id="soundSelect">
-      <option value="chime" selected>Chime</option>
-      <option value="marimba">Marimba</option>
-      <option value="vibraphone">Vibraphone</option>
+      <option value="chime">Chime</option>
+      <option value="rhodes">Rhodes</option>
+      <option value="vibraphone" selected>Vibraphone</option>
       <option value="gamelan">Gamelan</option>
       <option value="tubular">Tubular Bell</option>
       <option value="crystal">Crystal Bowl</option>
@@ -538,37 +538,42 @@ function playChime(freq, velocity) {
   shimmer.start(t); shimmer.stop(t + 0.4);
 }
 
-// ── Marimba — woody, resonant, fast attack, medium decay ─────────────────
-function playMarimba(freq, velocity) {
+// ── Rhodes — electric piano, warm tine character, medium decay ────────────
+function playRhodes(freq, velocity) {
   const t = actx.currentTime;
-  // Marimba partials: strong fundamental, lower inharmonics, fast decay
-  const partials = [
-    {ratio:1,    amp:1.0,  dec:0.9,  type:'sine'},
-    {ratio:3.93, amp:0.35, dec:0.45, type:'sine'},
-    {ratio:9.87, amp:0.12, dec:0.20, type:'sine'},
+  const dec = 2.8;
+  // Tine: fundamental + strong 2nd partial + soft inharmonic bite
+  const tine = [
+    {ratio:1,    amp:1.0,  type:'sine',     dec:dec},
+    {ratio:2,    amp:0.45, type:'sine',     dec:dec*0.75},
+    {ratio:3,    amp:0.12, type:'sine',     dec:dec*0.5},
+    {ratio:2.82, amp:0.08, type:'sine',     dec:dec*0.3},
   ];
-  partials.forEach(p => {
+  tine.forEach(p => {
     const osc = actx.createOscillator();
     const gain = actx.createGain();
     osc.type = p.type; osc.frequency.value = freq * p.ratio;
-    gain.gain.setValueAtTime(velocity * p.amp * 0.22, t);
+    gain.gain.setValueAtTime(velocity * p.amp * 0.20, t);
     gain.gain.exponentialRampToValueAtTime(0.0001, t + p.dec);
     osc.connect(gain); gain.connect(actx.destination);
     osc.start(t); osc.stop(t + p.dec);
   });
-  // Body thump noise burst
-  const buf = actx.createBuffer(1, actx.sampleRate * 0.025, actx.sampleRate);
-  const d = buf.getChannelData(0);
-  for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2-1);
-  const src = actx.createBufferSource();
-  const nfilt = actx.createBiquadFilter();
-  const nGain = actx.createGain();
-  src.buffer = buf;
-  nfilt.type = 'bandpass'; nfilt.frequency.value = freq * 1.2; nfilt.Q.value = 8;
-  nGain.gain.setValueAtTime(velocity * 0.15, t);
-  nGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.025);
-  src.connect(nfilt); nfilt.connect(nGain); nGain.connect(actx.destination);
-  src.start(t);
+  // Bite transient — brief bell-like click at attack
+  const bite = actx.createOscillator();
+  const biteGain = actx.createGain();
+  bite.type = 'triangle'; bite.frequency.value = freq * 6.7;
+  biteGain.gain.setValueAtTime(velocity * 0.18, t);
+  biteGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.055);
+  bite.connect(biteGain); biteGain.connect(actx.destination);
+  bite.start(t); bite.stop(t + 0.055);
+  // Soft tonewheel warmth underneath
+  const warm = actx.createOscillator();
+  const warmGain = actx.createGain();
+  warm.type = 'sine'; warm.frequency.value = freq * 0.5;
+  warmGain.gain.setValueAtTime(velocity * 0.10, t);
+  warmGain.gain.exponentialRampToValueAtTime(0.0001, t + dec * 1.1);
+  warm.connect(warmGain); warmGain.connect(actx.destination);
+  warm.start(t); warm.stop(t + dec * 1.1);
 }
 
 // ── Vibraphone — metallic, tremolo shimmer, long sustain ─────────────────
@@ -688,7 +693,7 @@ function playBell(freq, velocity = 0.5) {
   ensureAudio();
   const sound = getSoundType();
   if      (sound === 'chime')     playChime(freq, velocity);
-  else if (sound === 'marimba')   playMarimba(freq, velocity);
+  else if (sound === 'rhodes')    playRhodes(freq, velocity);
   else if (sound === 'vibraphone')playVibraphone(freq, velocity);
   else if (sound === 'gamelan')   playGamelan(freq, velocity);
   else if (sound === 'tubular')   playTubular(freq, velocity);
