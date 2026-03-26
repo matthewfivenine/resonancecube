@@ -47,6 +47,8 @@
     font-family: 'Rajdhani', sans-serif; font-weight: 300;
     font-size: 12px; letter-spacing: 0.45em; text-transform: uppercase;
     color: var(--accent); opacity: 0.75;
+    position: absolute; left: 50%; transform: translateX(-50%);
+    white-space: nowrap; pointer-events: none;
   }
 
   #stats { font-size: 9px; letter-spacing: 0.15em; color: var(--dim); text-align: right; line-height: 1.7; }
@@ -453,11 +455,11 @@ const SEQUENCES = [
     ]
   },
   {
-    name: "Messiaen Light",
+    name: "Ravel Dusk",
     steps: [
-      ['C','wholetone',12,'C Whole Tone'],['F#','wholetone',12,'F♯ Whole Tone'],
-      ['D','maj7s11',  14,'D Maj7♯11'],  ['Ab','maj13',    14,'Ab Major 13'],
-      ['E','wholetone',12,'E Whole Tone'],
+      ['C','maj13',  14,'C Major 13'], ['A','min11',  14,'A Minor 11'],
+      ['F','maj7s11',14,'F Maj7♯11'],  ['D','halfdim',14,'D Half Dim'],
+      ['Bb','maj13', 14,'B♭ Major 13'],
     ]
   },
   {
@@ -1099,7 +1101,7 @@ const SEQ_TAGS = [
   'modern impressionistic', 'modern impressionistic',
   'satie / gymnopedie', 'feldman / still',
   'takemitsu / rain', 'ecm / scandinavian',
-  'messiaen / spectral', 'glass / minimalist',
+  'ravel / impressionist', 'glass / minimalist',
 ];
 
 function buildSeqList() {
